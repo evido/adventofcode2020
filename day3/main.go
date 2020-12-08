@@ -12,6 +12,33 @@ type Field struct {
 	Template [][]bool
 }
 
+func readFieldRow(field *Field, line string, rowIndex int) error {
+	if len(line) == 0 {
+		return nil
+	}
+
+	width := len(line)
+	if rowIndex != 0 && width != len(field.Template[0]) {
+		return fmt.Errorf("All lines should have equal width: %s", line)
+	}
+
+	field.Template[rowIndex] = make([]bool, width)
+	for columnIndex, c := range line {
+		switch c {
+		case '.':
+			field.Template[rowIndex][columnIndex] = false
+			break
+		case '#':
+			field.Template[rowIndex][columnIndex] = true
+			break
+		default:
+			return errors.New("Invalid field template character")
+		}
+	}
+
+	return nil
+}
+
 func readField(filename string) (Field, error) {
 	var field Field
 
@@ -29,28 +56,12 @@ func readField(filename string) (Field, error) {
 	if fieldWidth == 0 {
 		return field, errors.New("Input file rows should have length greater than 0")
 	}
+
 	field.Template = make([][]bool, len(lines)-1)
 	for rowIndex, line := range lines {
-		if len(line) == 0 {
-			break
-		}
-
-		if len(line) != fieldWidth {
-			return field, fmt.Errorf("All lines should have equal width: %s", line)
-		}
-
-		field.Template[rowIndex] = make([]bool, fieldWidth)
-		for columnIndex, c := range line {
-			switch c {
-			case '.':
-				field.Template[rowIndex][columnIndex] = false
-				break
-			case '#':
-				field.Template[rowIndex][columnIndex] = true
-				break
-			default:
-				return field, errors.New("Invalid field template character")
-			}
+		err = readFieldRow(&field, line, rowIndex)
+		if err != nil {
+			return field, err
 		}
 	}
 
