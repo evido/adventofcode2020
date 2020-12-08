@@ -80,17 +80,17 @@ func readEntry(line string) (PasswordEntry, error) {
 	return entry, nil
 }
 
-func countValidEntries(entries []PasswordEntry) int {
+func countValidEntries(entries []PasswordEntry, isValid func(PasswordEntry) bool) int {
 	count := 0
 	for _, entry := range entries {
-		if entry.IsValid() {
+		if isValid(entry) {
 			count += 1
 		}
 	}
 	return count
 }
 
-func (entry *PasswordEntry) IsValid() bool {
+func IsValid(entry PasswordEntry) bool {
 	charCount := 0
 	for _, b := range entry.Password {
 		if byte(b) == entry.Policy.Char {
@@ -101,11 +101,30 @@ func (entry *PasswordEntry) IsValid() bool {
 	return charCount >= entry.Policy.MinCount && charCount <= entry.Policy.MaxCount
 }
 
+func IsValidUpdated(entry PasswordEntry) bool {
+
+	var validFirstPhase bool
+	if len(entry.Password) >= entry.Policy.MinCount {
+		validFirstPhase = byte(entry.Password[entry.Policy.MinCount-1]) == entry.Policy.Char
+	} else {
+		validFirstPhase = false
+	}
+
+	var validSecondPhase bool
+	if len(entry.Password) >= entry.Policy.MaxCount {
+		validSecondPhase = byte(entry.Password[entry.Policy.MaxCount-1]) == entry.Policy.Char
+	} else {
+		validSecondPhase = false
+	}
+
+	return validFirstPhase != validSecondPhase
+}
+
 func main() {
 	entries, err := readEntries("custom_input.txt")
 	if err != nil {
 		log.Fatalf("Invalid test input!: %s\n", err)
 	}
 
-	fmt.Printf("Valid entries: %d\n", countValidEntries(entries))
+	fmt.Printf("Valid entries: %d\n", countValidEntries(entries, IsValidUpdated))
 }
