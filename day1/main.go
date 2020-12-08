@@ -26,14 +26,29 @@ func read_expense_report(file_name string) ([]int, error) {
 	return expenses, nil
 }
 
-func main() {
-
-	goal := 2020
-	expenses, err := read_expense_report(os.Args[1])
-	if err != nil {
-		log.Fatalf("Unable to read expense report!\n")
+func find_product_(goal, terms int, expenses map[int]int) int {
+	if terms == 1 {
+		if count, ok := expenses[goal]; ok && count > 0 {
+			return goal
+		}
+		return -1
 	}
 
+	for expense, count := range expenses {
+		if count > 0 && expense < goal {
+			expenses[expense] -= 1
+			solution := find_product_(goal-expense, terms-1, expenses)
+			if solution >= 0 {
+				return expense * solution
+			}
+			expenses[expense] += 1
+		}
+	}
+
+	return -1
+}
+
+func find_product(goal, terms int, expenses []int) int {
 	expenseSet := make(map[int]int)
 	for _, expense := range expenses {
 		if count, ok := expenseSet[expense]; ok {
@@ -43,15 +58,15 @@ func main() {
 		}
 	}
 
-	for expense, expenseCount := range expenseSet {
-		targetExpense := goal - expense
-		if targetExpense == expense && expenseCount > 1 {
-			fmt.Printf("%d\n", expense*targetExpense)
-			break
-		}
-		if _, ok := expenseSet[targetExpense]; ok {
-			fmt.Printf("%d\n", expense*targetExpense)
-			break
-		}
+	return find_product_(goal, terms, expenseSet)
+}
+
+func main() {
+
+	expenses, err := read_expense_report(os.Args[1])
+	if err != nil {
+		log.Fatalf("Unable to read expense report!\n")
 	}
+
+	fmt.Printf("Solution: %d\n", find_product(2020, 3, expenses))
 }
