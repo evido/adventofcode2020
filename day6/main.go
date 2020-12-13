@@ -38,30 +38,54 @@ func readGroupResponses(filename string) ([]GroupResponse, error) {
 	return responses, nil
 }
 
-func (response *GroupResponse) Positive() []string {
-	questions := make(map[rune]bool)
+func (response *GroupResponse) Responses() map[string]int {
+	questions := make(map[string]int)
 
 	for _, response := range response.answers {
 		for _, question := range response {
-			questions[question] = true
+			questions[string(question)] += 1
 		}
 	}
 
-	questionList := make([]string, 0)
-	for question := range questions {
-		questionList = append(questionList, string(question))
+	return questions
+}
+
+func (response *GroupResponse) Size() int {
+	return len(response.answers)
+}
+
+func (response *GroupResponse) UnanymousResponseCount() int {
+	unanymousCount := 0
+	size := response.Size()
+
+	for _, count := range response.Responses() {
+		if count == size {
+			unanymousCount += 1
+		}
 	}
 
-	return questionList
+	return unanymousCount
+}
+
+func (response *GroupResponse) PositiveResponseCount() int {
+	return len(response.Responses())
 }
 
 func sumPositiveResponsesByGroup(responses []GroupResponse) int {
 	sum := 0
 
 	for _, response := range responses {
-		sum += len(response.Positive())
+		sum += response.PositiveResponseCount()
 	}
 
+	return sum
+}
+
+func sumUnanymousPositiveResponseByGroup(responses []GroupResponse) int {
+	sum := 0
+	for _, response := range responses {
+		sum += response.UnanymousResponseCount()
+	}
 	return sum
 }
 
@@ -73,4 +97,7 @@ func main() {
 
 	sumByGroup := sumPositiveResponsesByGroup(responses)
 	log.Printf("Positive Response By Group: %d\n", sumByGroup)
+
+	unanymousByGroup := sumUnanymousPositiveResponseByGroup(responses)
+	log.Printf("Unanymous responses by group: %d\n", unanymousByGroup)
 }
