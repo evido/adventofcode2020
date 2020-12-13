@@ -78,11 +78,7 @@ func readBoardingPass(line string) BoardingPass {
 	}
 }
 
-func main() {
-	boardingPasses, err := readBoardingPasses(os.Args[1])
-	if err != nil {
-		log.Fatalf("Unable to read boarding passes: %s\n", err)
-	}
+func findMaxSeatId(boardingPasses []BoardingPass) int {
 
 	maxSeatId := -1
 	for _, pass := range boardingPasses {
@@ -92,5 +88,31 @@ func main() {
 		}
 	}
 
-	log.Printf("Seat ID: %d\n", maxSeatId)
+	return maxSeatId
+}
+
+func findMySeatId(boardingPasses []BoardingPass) int {
+	allSeats := make([]bool, findMaxSeatId(boardingPasses))
+
+	for _, pass := range boardingPasses {
+		allSeats[pass.seatId()-1] = true
+	}
+
+	for ix := 1; ix < len(allSeats)-1; ix += 1 {
+		if allSeats[ix-1] && !allSeats[ix] && allSeats[ix+1] {
+			return ix + 1
+		}
+	}
+
+	return -1
+}
+
+func main() {
+	boardingPasses, err := readBoardingPasses(os.Args[1])
+	if err != nil {
+		log.Fatalf("Unable to read boarding passes: %s\n", err)
+	}
+
+	log.Printf("Seat ID: %d\n", findMaxSeatId(boardingPasses))
+	log.Printf("My Seat ID: %d\n", findMySeatId(boardingPasses))
 }
