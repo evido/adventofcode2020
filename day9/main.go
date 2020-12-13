@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -57,6 +58,34 @@ func findInvalidElement(data []int64, preamble, context int) int {
 	return -1
 }
 
+func findTerms(data []int64, target int64) []int64 {
+	lower := 0
+	upper := 0
+	current := int64(0)
+
+	for upper < len(data) {
+		if current > target {
+			current -= data[lower]
+			lower += 1
+		} else if current < target {
+			current += data[upper]
+			upper += 1
+		} else {
+			break
+		}
+	}
+
+	return data[lower:upper]
+}
+
+func findWeakness(terms []int64) int64 {
+	sort.Slice(terms, func(i, j int) bool {
+		return terms[i] < terms[j]
+	})
+
+	return terms[0] + terms[len(terms)-1]
+}
+
 func main() {
 	data, err := readData(os.Args[1])
 	if err != nil {
@@ -65,4 +94,8 @@ func main() {
 
 	invalidElementIndex := findInvalidElement(data, 25, 25)
 	log.Printf("Invalid data element: %d\n", data[invalidElementIndex])
+
+	terms := findTerms(data, data[invalidElementIndex])
+	log.Printf("terms: %+v\n", terms)
+	log.Printf("weakness: %d\n", findWeakness(terms))
 }
