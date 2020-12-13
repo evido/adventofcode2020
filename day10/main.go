@@ -83,6 +83,7 @@ func countAdaptersOptions(adapters []int, source, target int) int64 {
 	optionsCache[source] = options
 	return options
 }
+
 func main() {
 	allAdapters, err := readAdapters(os.Args[1])
 	if err != nil {
