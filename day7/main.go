@@ -94,6 +94,20 @@ func countPossibleBags(specifications []Specification, target string) int {
 	return possible
 }
 
+func countRequiredBags(specifications []Specification, target string) int {
+	total := 0
+	for _, specification := range specifications {
+		if specification.color != target {
+			continue
+		}
+
+		for content, count := range specification.contents {
+			total += count * (1 + countRequiredBags(specifications, content))
+		}
+	}
+	return total
+}
+
 func main() {
 	specifications, err := readSpecifications(os.Args[1])
 
@@ -102,4 +116,5 @@ func main() {
 	}
 
 	log.Printf("Possible bags: %d\n", countPossibleBags(specifications, "shiny gold"))
+	log.Printf("Required bags: %d\n", countRequiredBags(specifications, "shiny gold"))
 }
