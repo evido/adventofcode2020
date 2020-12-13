@@ -19,9 +19,10 @@ type Instruction interface {
 }
 
 type NoOperation struct {
+	argument int
 }
 
-func (operation *NoOperation) process(machine *Machine) {
+func (operation NoOperation) process(machine *Machine) {
 	machine.instruction_pointer += 1
 }
 
@@ -29,7 +30,7 @@ type Jump struct {
 	argument int
 }
 
-func (operation *Jump) process(machine *Machine) {
+func (operation Jump) process(machine *Machine) {
 	machine.instruction_pointer += operation.argument
 }
 
@@ -37,7 +38,7 @@ type Accumulate struct {
 	argument int
 }
 
-func (operation *Accumulate) process(machine *Machine) {
+func (operation Accumulate) process(machine *Machine) {
 	machine.accumulator += operation.argument
 	machine.instruction_pointer += 1
 }
@@ -74,15 +75,16 @@ func readInstruction(line string) (Instruction, error) {
 	}
 
 	switch parts[0] {
-
 	case "nop":
-		return &NoOperation{}, nil
+		return NoOperation{
+			argument: int(argument),
+		}, nil
 	case "acc":
-		return &Accumulate{
+		return Accumulate{
 			argument: int(argument),
 		}, nil
 	case "jmp":
-		return &Jump{
+		return Jump{
 			argument: int(argument),
 		}, nil
 	}
@@ -90,19 +92,57 @@ func readInstruction(line string) (Instruction, error) {
 	return nil, fmt.Errorf("Unrecognized instruction: %s", line)
 }
 
-func findLoop(machine *Machine, instructions []Instruction) {
+func findLoop(machine *Machine, instructions []Instruction) bool {
 	visited := make(map[int]bool)
-	current := 0
+	current := machine.instruction_pointer
 
-	for {
+	for current < len(instructions) {
 		if _, ok := visited[current]; !ok {
 			visited[current] = true
 			instructions[current].process(machine)
 			current = machine.instruction_pointer
 		} else {
-			break
+			return true
 		}
 	}
+
+	return false
+}
+
+func (machine *Machine) Reset() {
+	machine.instruction_pointer = 0
+	machine.accumulator = 0
+}
+
+func swapInstruction(instruction Instruction) Instruction {
+	switch instruction.(type) {
+	case NoOperation:
+		return Jump{
+			argument: instruction.(NoOperation).argument,
+		}
+	case Jump:
+		return NoOperation{
+			argument: instruction.(Jump).argument,
+		}
+	default:
+		return instruction
+	}
+}
+
+func tryFixLoop(machine *Machine, instructions []Instruction) int {
+	for ix, original := range instructions {
+		machine.Reset()
+
+		instructions[ix] = swapInstruction(original)
+		loops := findLoop(machine, instructions)
+		instructions[ix] = original
+
+		if !loops {
+			return ix
+		}
+	}
+
+	return -1
 }
 
 func main() {
@@ -114,4 +154,8 @@ func main() {
 	machine := Machine{}
 	findLoop(&machine, instructions)
 	fmt.Printf("Accumulator: %d\n", machine.accumulator)
+
+	machine.Reset()
+	fmt.Printf("Fixed instruction: %d\n", tryFixLoop(&machine, instructions))
+	fmt.Printf("Fixed accumulator: %d\n", machine.accumulator)
 }
