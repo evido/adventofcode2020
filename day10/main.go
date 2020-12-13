@@ -62,6 +62,27 @@ func countDiff(path []int, diff int) int {
 	return count
 }
 
+var optionsCache map[int]int64 = make(map[int]int64)
+
+func countAdaptersOptions(adapters []int, source, target int) int64 {
+	if options, ok := optionsCache[source]; ok {
+		return options
+	}
+
+	if target-source == 3 {
+		return 1
+	}
+
+	options := int64(0)
+	for _, adapter := range adapters {
+		if adapter > source && adapter-source <= 3 {
+			options += countAdaptersOptions(adapters, adapter, target)
+		}
+	}
+
+	optionsCache[source] = options
+	return options
+}
 func main() {
 	allAdapters, err := readAdapters(os.Args[1])
 	if err != nil {
@@ -81,4 +102,5 @@ func main() {
 	log.Printf("Diff 1: %d\n", oneDiffCount)
 	log.Printf("Diff 3: %d\n", threeDiffCount)
 	log.Printf("Solution: %d\n", oneDiffCount*threeDiffCount)
+	log.Printf("Options: %d\n", countAdaptersOptions(adapters, 0, target))
 }
