@@ -20,6 +20,54 @@ type Board struct {
 	state [][]State
 }
 
+func (board *Board) CountOccupiedNeighboursv2(i, j int) int {
+	directions := [][]int{
+		{0, 1},
+		{1, 1},
+		{1, 0},
+		{1, -1},
+		{0, -1},
+		{-1, -1},
+		{-1, 0},
+		{-1, 1},
+	}
+
+	occupied := 0
+	for _, direction := range directions {
+		if board.SeesOccupiedSeat(i, j, direction) {
+			occupied += 1
+		}
+	}
+
+	return occupied
+}
+
+func (board *Board) SeesOccupiedSeat(i, j int, direction []int) bool {
+	for n := 1; ; n += 1 {
+		t_i := i + n*direction[0]
+		t_j := j + n*direction[1]
+
+		if t_i < 0 || t_i >= len(board.state) {
+			break
+		}
+
+		if t_j < 0 || t_j >= len(board.state[t_i]) {
+			break
+		}
+
+		switch board.state[t_i][t_j] {
+		case FLOOR:
+			continue
+		case EMPTY:
+			return false
+		case OCCUPIED:
+			return true
+		}
+	}
+
+	return false
+}
+
 func (board *Board) CountOccupiedNeighbours(i, j int) int {
 	occupied := 0
 	for di := -1; di <= 1; di += 1 {
@@ -46,6 +94,7 @@ func (board *Board) CountOccupiedNeighbours(i, j int) int {
 
 func (board *Board) SimulateSeat(i, j int) State {
 	occupied := board.CountOccupiedNeighbours(i, j)
+
 	switch board.state[i][j] {
 	case FLOOR:
 		return FLOOR
@@ -64,6 +113,27 @@ func (board *Board) SimulateSeat(i, j int) State {
 	}
 }
 
+func (board *Board) SimulateSeatv2(i, j int) State {
+	occupied := board.CountOccupiedNeighboursv2(i, j)
+
+	switch board.state[i][j] {
+	case FLOOR:
+		return FLOOR
+	case EMPTY:
+		if occupied > 0 {
+			return EMPTY
+		}
+		return OCCUPIED
+	case OCCUPIED:
+		if occupied > 4 {
+			return EMPTY
+		}
+		return OCCUPIED
+	default:
+		return board.state[i][j]
+	}
+}
+
 func (board *Board) Simulate() int {
 
 	modifications := 0
@@ -71,7 +141,7 @@ func (board *Board) Simulate() int {
 	for i := 0; i < len(board.state); i += 1 {
 		newState[i] = make([]State, len(board.state[i]))
 		for j := 0; j < len(board.state[i]); j += 1 {
-			newState[i][j] = board.SimulateSeat(i, j)
+			newState[i][j] = board.SimulateSeatv2(i, j)
 			if newState[i][j] != board.state[i][j] {
 				modifications += 1
 			}
