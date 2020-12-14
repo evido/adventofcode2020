@@ -90,12 +90,17 @@ func readAction(line string) (Action, error) {
 	return action, nil
 }
 
-type Navigation struct {
+type Navigation interface {
+	ApplyAction(action *Action)
+	Distance() int
+}
+
+type ShipNavigation struct {
 	direction [2]int
 	position  [2]int
 }
 
-func (navigation *Navigation) ApplyAction(action *Action) {
+func (navigation *ShipNavigation) ApplyAction(action *Action) {
 	direction := [2]int{0, 0}
 	switch action.code {
 	case NORTH:
@@ -133,15 +138,69 @@ func (navigation *Navigation) ApplyAction(action *Action) {
 	navigation.position[1] += action.value * direction[1]
 }
 
-func (navigation *Navigation) Distance() int {
+func (navigation *ShipNavigation) Distance() int {
 	return int(math.Abs(float64(navigation.position[0])) +
 		math.Abs(float64(navigation.position[1])))
 }
 
-func NewNavigation() Navigation {
-	return Navigation{
+func NewShipNavigation() Navigation {
+	navigation := ShipNavigation{
 		direction: [2]int{1, 0},
 		position:  [2]int{0, 0},
+	}
+
+	return &navigation
+}
+
+type WaypointNavigation struct {
+	waypoint [2]int
+	position [2]int
+}
+
+func (navigation *WaypointNavigation) ApplyAction(action *Action) {
+	switch action.code {
+	case FORWARD:
+		navigation.position[0] += navigation.waypoint[0] * action.value
+		navigation.position[1] += navigation.waypoint[1] * action.value
+		break
+	case NORTH:
+		navigation.waypoint[1] += action.value
+		break
+	case SOUTH:
+		navigation.waypoint[1] -= action.value
+		break
+	case EAST:
+		navigation.waypoint[0] += action.value
+		break
+	case WEST:
+		navigation.waypoint[0] -= action.value
+		break
+	case LEFT:
+		for ix := 0; ix < action.value/90; ix += 1 {
+			newXMagnitude := -navigation.waypoint[1]
+			navigation.waypoint[1] = navigation.waypoint[0]
+			navigation.waypoint[0] = newXMagnitude
+		}
+		break
+	case RIGHT:
+		for ix := 0; ix < action.value/90; ix += 1 {
+			newYMagnitude := -navigation.waypoint[0]
+			navigation.waypoint[0] = navigation.waypoint[1]
+			navigation.waypoint[1] = newYMagnitude
+		}
+		break
+	}
+}
+
+func (navigation *WaypointNavigation) Distance() int {
+	return int(math.Abs(float64(navigation.position[0])) +
+		math.Abs(float64(navigation.position[1])))
+}
+
+func NewWaypointNavigation() Navigation {
+	return &WaypointNavigation{
+		waypoint: [2]int{10, 1},
+		position: [2]int{0, 0},
 	}
 }
 
@@ -151,7 +210,7 @@ func main() {
 		log.Fatalf("Unable to read actions: %s\n", err)
 	}
 
-	navigation := NewNavigation()
+	navigation := NewShipNavigation()
 	for _, action := range actions {
 		navigation.ApplyAction(&action)
 		log.Printf("Navigation: %+v\n", navigation)
@@ -159,4 +218,13 @@ func main() {
 
 	log.Printf("Navigation: %+v\n", navigation)
 	log.Printf("Distance: %d\n", navigation.Distance())
+
+	waypointNavigation := NewWaypointNavigation()
+	for _, action := range actions {
+		waypointNavigation.ApplyAction(&action)
+		log.Printf("Navigation: %+v\n", waypointNavigation)
+	}
+
+	log.Printf("Navigation: %+v\n", waypointNavigation)
+	log.Printf("Distance: %d\n", waypointNavigation.Distance())
 }
