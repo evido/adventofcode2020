@@ -10,8 +10,8 @@ import (
 )
 
 type Note struct {
-	departure int
-	busLines  []int
+	departure int64
+	busLines  []int64
 }
 
 func readNote(filename string) (Note, error) {
@@ -20,19 +20,20 @@ func readNote(filename string) (Note, error) {
 		return Note{}, err
 	}
 
-	busLines := make([]int, 0)
 	lines := strings.Split(string(bytes), "\n")
 	if len(lines) < 2 {
 		return Note{}, errors.New("Note should have at least 2 lines")
 	}
 
-	departure, err := strconv.ParseInt(lines[0], 10, 32)
+	departure, err := strconv.ParseInt(lines[0], 10, 64)
 	if err != nil {
 		return Note{}, err
 	}
 
+	busLines := make([]int64, 0)
 	for _, id := range strings.Split(lines[1], ",") {
 		if id == "x" {
+			busLines = append(busLines, 0)
 			continue
 		}
 
@@ -41,26 +42,36 @@ func readNote(filename string) (Note, error) {
 			return Note{}, err
 		}
 
-		busLines = append(busLines, int(busLine))
+		busLines = append(busLines, busLine)
 	}
 
 	return Note{
-		departure: int(departure),
+		departure: departure,
 		busLines:  busLines,
 	}, nil
 }
 
 type Departure struct {
-	time    int
-	busLine int
+	time    int64
+	busLine int64
 }
 
-func findMinDeparture(departure, busLine int) Departure {
+func findMinDeparture(departure int64, busLine int64) Departure {
 	remainder := departure % busLine
+
+	if remainder == 0 {
+		remainder = busLine
+	}
+
 	return Departure{
 		busLine: busLine,
 		time:    departure + (busLine - remainder),
 	}
+}
+
+type BusDeparture struct {
+	busLine int64
+	offset  int64
 }
 
 func main() {
@@ -69,14 +80,42 @@ func main() {
 		log.Fatalf("Unable to read note: %s\n", err)
 	}
 
-	minDeparture := findMinDeparture(note.departure, note.busLines[0])
-	for ix := 1; ix < len(note.busLines); ix += 1 {
-		departure := findMinDeparture(note.departure, note.busLines[ix])
-		if departure.time < minDeparture.time {
+	minDeparture := Departure{time: -1}
+	for _, busLine := range note.busLines {
+		if busLine == 0 {
+			continue
+		}
+
+		departure := findMinDeparture(note.departure, busLine)
+		if minDeparture.time == -1 || departure.time < minDeparture.time {
 			minDeparture = departure
 		}
 	}
 
 	log.Printf("Departure: %+v\n", minDeparture)
 	log.Printf("Score: %d\n", (minDeparture.time-note.departure)*minDeparture.busLine)
+
+	departures := make([]BusDeparture, 0)
+	for offset, busLine := range note.busLines {
+		if busLine != 0 {
+			departures = append(departures, BusDeparture{
+				offset:  int64(offset),
+				busLine: busLine,
+			})
+		}
+	}
+
+	log.Printf("%+v\n", departures)
+	timestamp := int64(0)
+	inc := departures[0].busLine
+
+	for ix := 1; ix < len(departures); ix += 1 {
+		for (timestamp+departures[ix].offset)%departures[ix].busLine != 0 {
+			timestamp += inc
+		}
+
+		inc *= departures[ix].busLine
+	}
+
+	log.Printf("%d\n", timestamp)
 }
